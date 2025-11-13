@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "Get all verified users",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create new verified user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "username": "test_user",
+        "phone": "+79001234567",
+        "user_id": "123456",
+        "social_networks": ["telegram", "vk"],
+        "status": "active",
+        "category": "premium"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "username": "test_user",
+        "phone": "+79001234567"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
