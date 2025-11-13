@@ -4,48 +4,69 @@ import VerificationCertificate from '@/components/VerificationCertificate';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Card, CardContent } from '@/components/ui/card';
-
-const API_URL = 'https://functions.poehali.dev/42adc41d-a9ba-4cc8-8597-2704846d1e7d';
-
-interface VerifiedUser {
-  id: number;
-  unique_id: string;
-  username: string;
-  phone: string;
-  user_id: string;
-  social_networks: string[];
-  status: string;
-  category: string;
-  created_at: string;
-}
+import { getUserByUniqueId, type VerifiedUser } from '@/lib/localStorage';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { useToast } from '@/hooks/use-toast';
 
 const CertificateView = () => {
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [user, setUser] = useState<VerifiedUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(`${API_URL}?id=${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data);
-        } else {
-          setError(true);
-        }
-      } catch (err) {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) {
-      fetchUser();
+      const userData = getUserByUniqueId(id);
+      setUser(userData);
+      setLoading(false);
     }
   }, [id]);
+
+  const exportToPDF = async () => {
+    if (!user) return;
+
+    setExportingPDF(true);
+    try {
+      const element = document.getElementById('certificate-content');
+      if (!element) {
+        throw new Error('Certificate element not found');
+      }
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 10, imgWidth, imgHeight);
+      pdf.save(`certificate-${user.unique_id}.pdf`);
+
+      toast({
+        title: 'Готово!',
+        description: 'Сертификат сохранён в PDF'
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось экспортировать в PDF',
+        variant: 'destructive'
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -58,7 +79,7 @@ const CertificateView = () => {
     );
   }
 
-  if (error || !user) {
+  if (!user && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
@@ -77,6 +98,8 @@ const CertificateView = () => {
       </div>
     );
   }
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white py-12">
@@ -98,6 +121,7 @@ const CertificateView = () => {
           category={user.category}
           createdAt={user.created_at}
           showWatermark={false}
+          isPdfExport={exportingPDF}
         />
 
         <div className="mt-8 text-center">
@@ -110,10 +134,11 @@ const CertificateView = () => {
               Распечатать
             </Button>
             <Button
-              onClick={() => window.location.href = '/'}
+              onClick={exportToPDF}
+              disabled={exportingPDF}
             >
-              <Icon name="Home" size={20} className="mr-2" />
-              Главная страница
+              <Icon name="FileDown" size={20} className="mr-2" />
+              {exportingPDF ? 'Экспорт...' : 'Скачать PDF'}
             </Button>
           </div>
         </div>

@@ -1,16 +1,22 @@
 import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 
+interface SocialNetwork {
+  name: string;
+  url: string;
+}
+
 interface VerificationCertificateProps {
   username: string;
   phone: string;
   userId: string;
   uniqueId: string;
-  socialNetworks: string[];
+  socialNetworks: SocialNetwork[];
   status: string;
   category: string;
   createdAt: string;
   showWatermark?: boolean;
+  isPdfExport?: boolean;
 }
 
 const VerificationCertificate = ({
@@ -22,21 +28,32 @@ const VerificationCertificate = ({
   status,
   category,
   createdAt,
-  showWatermark = false
+  showWatermark = false,
+  isPdfExport = false
 }: VerificationCertificateProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
+    return date.toLocaleString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Moscow'
     });
   };
 
+  const maskPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 6) return phone;
+    const first4 = digits.slice(0, 4);
+    const last2 = digits.slice(-2);
+    const masked = '*'.repeat(digits.length - 6);
+    return `${first4}${masked}${last2}`;
+  };
+
   return (
-    <Card className="relative w-full max-w-2xl mx-auto p-8 bg-white border-2 border-gray-200 shadow-lg overflow-hidden">
+    <Card className="relative w-full max-w-2xl mx-auto p-8 bg-white border-2 border-gray-200 shadow-lg overflow-hidden" id="certificate-content">
       {showWatermark && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
           <div className="relative">
@@ -62,8 +79,12 @@ const VerificationCertificate = ({
         </div>
 
         <div className="flex items-center justify-center gap-3 mb-8 pb-6 border-b-2 border-gray-100">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-            <Icon name="CheckCircle" size={32} className="text-primary" />
+          <div className="relative w-16 h-16 flex-shrink-0">
+            <img 
+              src="https://cdn.poehali.dev/files/a0dd6f24-4292-4754-ba2e-ee1070d392d3.png" 
+              alt="Verified" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900" style={{ fontFamily: 'Roboto, sans-serif' }}>
@@ -81,7 +102,7 @@ const VerificationCertificate = ({
 
           <div className="flex justify-between py-3 border-b border-gray-100">
             <span className="text-gray-600 font-medium">Телефон:</span>
-            <span className="text-gray-900 font-semibold">{phone}</span>
+            <span className="text-gray-900 font-semibold">{maskPhone(phone)}</span>
           </div>
 
           <div className="flex justify-between py-3 border-b border-gray-100">
@@ -90,13 +111,26 @@ const VerificationCertificate = ({
           </div>
 
           {socialNetworks && socialNetworks.length > 0 && (
-            <div className="flex justify-between py-3 border-b border-gray-100">
-              <span className="text-gray-600 font-medium">Социальные сети:</span>
-              <div className="flex gap-2 flex-wrap justify-end">
+            <div className="py-3 border-b border-gray-100">
+              <span className="text-gray-600 font-medium block mb-3">Социальные сети:</span>
+              <div className="space-y-2">
                 {socialNetworks.map((network, index) => (
-                  <span key={index} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                    {network}
-                  </span>
+                  <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                    <span className="text-gray-900 font-medium">{network.name}</span>
+                    {isPdfExport ? (
+                      <span className="text-gray-700 text-sm">{network.url}</span>
+                    ) : (
+                      <a
+                        href={network.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline text-sm flex items-center gap-1"
+                      >
+                        {network.url}
+                        <Icon name="ExternalLink" size={14} />
+                      </a>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
